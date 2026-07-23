@@ -7,11 +7,12 @@ entire workflow end to end — data loading → EDA → leakage-safe feature eng
 chronological backtest → feature ablation → paired-bootstrap significance test →
 quantile-demand layer → capacity-bounded inventory stress test.
 
-> **Scope note (matches report §8.1).** What exists today is the notebook below. A modular
-> production pipeline (separate `features.py` / `train.py` / `evaluate.py` / `predict.py` /
-> `simulate.py` on a recurring schedule, with monitoring and drift detection) is a
-> *recommendation for the next phase*, **not** something built here. This repo deliberately
-> ships only what the report validated, so code and report stay consistent.
+> **Scope note (consistent with report §8.1).** The **notebook is the validated artifact** — it
+> is where the results in the report were produced and audited end to end. Alongside it, this repo
+> ships three small helper scripts (`pipeline.py`, `train_model.py`, `predict.py`) that reuse the
+> notebook's *exact* Version 5 feature engineering so the delivered model is directly runnable.
+> These are lightweight serving utilities, **not** the full productionised pipeline: scheduled
+> retraining, monitoring, and drift detection remain the recommended next phase (see below).
 
 ---
 
@@ -21,15 +22,20 @@ quantile-demand layer → capacity-bounded inventory stress test.
 cofano-fuel-forecast/
 ├── README.md                 # this file
 ├── requirements.txt          # Python dependencies
-├── full_pipeline.ipynb       # THE product: full workflow, run top-to-bottom
+├── full_pipeline.ipynb       # validated workflow: EDA → backtest → ablation → quantiles → simulation
+├── pipeline.py               # shared Version 5 feature engineering (imported by the scripts)
+├── train_model.py            # fit the model bundle on all history  → model/model_bundle.pkl
+├── predict.py                # run the model                        → outputs/forecast.csv (next 7 days)
+├── model/
+│   └── model_bundle.pkl      # trained models: point ensemble + P50/P90/P95 quantiles + encodings
 └── data/
     ├── demand_history.csv     # enriched demand dataset (model input #1)
     └── station_metadata.csv   # station geography/metadata (model input #2)
 ```
 
-Running the notebook creates an `outputs/` folder (metrics tables, forecast CSVs, charts).
-`outputs/` and any model artifact are intentionally git-ignored — they are **regenerated**
-by running the notebook, not stored.
+The notebook and `predict.py` write to an `outputs/` folder (metrics, forecasts, charts), which is
+git-ignored and **regenerated** on each run. The trained **`model/model_bundle.pkl` is committed** so
+the project runs out of the box; you can also rebuild it from scratch with `train_model.py`.
 
 ---
 
@@ -49,22 +55,38 @@ The notebook auto-discovers the two CSVs in `./data/` (and in the working direct
 2. Upload `demand_history.csv` and `station_metadata.csv` (to `/content` or a `data/` folder).
 3. Runtime ▸ Run all.
 
+**Option C — Run the model directly (no notebook):**
+```bash
+pip install -r requirements.txt
+
+# Forecast the next 7 days using the committed model:
+python predict.py                       # -> outputs/forecast.csv
+python predict.py --start 2026-05-23 --horizon 7
+
+# Rebuild the model from the data (optional, ~1-2 min):
+python train_model.py                   # -> model/model_bundle.pkl
+```
+
 ---
 
-## The model, and how to get it
+## The model
 
-The notebook **trains the models itself** as part of the backtest and quantile stages — it
-is an end-to-end pipeline you re-run and audit in one sitting, not a frozen binary. There is
-therefore **no pre-built `model_bundle.pkl` committed** (an earlier bundle existed but was
-produced by superseded code and trained on non-anonymised data, so it is not shipped here).
+`model/model_bundle.pkl` is produced by `train_model.py`, which fits the **exact** models the
+notebook validated on **all** eligible history (last 28 days held out only for early stopping):
 
-- **Point forecast:** an XGBoost ensemble (Tweedie + absolute-error objectives, bagged),
-  clipped at zero.
-- **Safety stock:** quantile models (`reg:quantileerror`) producing **P50 / P90 / P95**.
+- **Point forecast (`forecast`):** an XGBoost ensemble — Tweedie (variance power 1.4) +
+  absolute-error objectives, averaged and clipped at zero.
+- **Safety stock (`p50` / `p90` / `p95`):** quantile models (`reg:quantileerror`). At prediction
+  time the three levels are rearranged to be non-crossing (P50 ≤ P90 ≤ P95).
 
-If you want a standalone serialised model for serving, add a short export cell at the end of
-the notebook (fit on all available history, `joblib.dump(...)`) — we can provide this on
-request.
+The bundle is a dict: `point` (list of models), `quantile` (`P50/P90/P95`), `cat_maps`
+(categorical encodings so prediction matches training), `features`, and `meta`. `predict.py`
+loads it, extends each series with the requested horizon, rebuilds features via `pipeline.py`,
+and writes forecasts. Because every feature uses history ≥ 7 days old, a full 7-day-ahead weekly
+forecast is leakage-safe.
+
+> Retrain periodically (`train_model.py`) as new sales data arrives. The model is **global** (one
+> model across all station-product series), so new stations can be forecast without a per-station model.
 
 ---
 
