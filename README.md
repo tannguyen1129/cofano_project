@@ -28,9 +28,10 @@ cofano-fuel-forecast/
 ├── predict.py                # run the model                        → outputs/forecast.csv (next 7 days)
 ├── model/
 │   └── model_bundle.pkl      # trained models: point ensemble + P50/P90/P95 quantiles + encodings
-└── data/
-    ├── demand_history.csv     # enriched demand dataset (model input #1)
-    └── station_metadata.csv   # station geography/metadata (model input #2)
+├── data/
+│   ├── demand_history.csv     # enriched demand dataset (model input #1)
+│   └── station_metadata.csv   # station geography/metadata (model input #2)
+└── webapp/                   # demo dashboard (Django + Next.js) — see section below
 ```
 
 The notebook and `predict.py` write to an `outputs/` folder (metrics, forecasts, charts), which is
@@ -142,6 +143,55 @@ takeaway is that the model should hand ROVER **both** a point forecast (P50, for
 consumption, delivery timing and truck-load sizing) **and** a safety-stock quantile (P95, for
 protection against stockouts). ROVER then decides the final delivery quantity using real tank
 capacities and routing constraints. The gap P95 − P50 is the tunable safety margin.
+
+---
+
+## Demo dashboard (`webapp/`) — prototype, outside the report's scope
+
+A small web dashboard is included so the forecasts can be inspected visually. **It is a demo
+prototype, not part of what the final report validated** — the report's results all come from the
+notebook. It is included for convenience and has no authentication.
+
+It does, however, run the **same Version 5 model**: the API loads `model/model_bundle.pkl` and
+reuses `pipeline.py`, and the inventory panel uses the capacity-capped simulation (report §6.2),
+not the superseded unbounded-overfill version.
+
+```
+webapp/
+├── backend/            Django + DRF API (serves the built frontend too)
+│   ├── serve.py        threaded WSGI launcher (binds 127.0.0.1 by default)
+│   └── forecast/       models, views, serializers, ml_service.py (loads the v5 bundle)
+├── frontend/           Next.js static export (source in app/, build output in out/)
+├── data/               sim_predictions.csv — backtest slice replayed by the inventory panel
+├── make_sim_data.py    regenerates that slice from the v5 pipeline
+└── .env.example        required environment variables
+```
+
+**Run it:**
+```bash
+pip install -r requirements.txt django djangorestframework django-cors-headers
+
+cp webapp/.env.example webapp/.env      # then edit, or just export the variables
+export DJANGO_SECRET_KEY="<a long random string>"
+export DJANGO_ALLOWED_HOSTS="127.0.0.1,localhost"
+
+cd webapp/backend
+python manage.py migrate
+python manage.py seed                   # runs the v5 model to fill the forecast table
+python serve.py 8080                    # http://127.0.0.1:8080
+```
+
+To rebuild the frontend after editing it: `cd webapp/frontend && npm install && npm run build`.
+To refresh the inventory-panel data: `python webapp/make_sim_data.py`.
+
+**Security notes.** `SECRET_KEY`, `DEBUG` and `ALLOWED_HOSTS` come from environment variables —
+nothing is hardcoded. `serve.py` binds to `127.0.0.1` unless you set `HOST`. There is no login, so
+do not expose it publicly; put it behind a reverse proxy with authentication if it must be reachable.
+
+**Numbers shown.** The KPI, benchmark and inventory-penalty figures are the report's five-fold
+Version 5 results. The interactive per-tank simulation replays a single combined out-of-sample
+window (`make_sim_data.py`), so its per-series numbers illustrate behaviour rather than reproduce
+the five-fold aggregates exactly.
 
 ---
 

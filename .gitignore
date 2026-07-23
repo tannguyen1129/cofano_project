@@ -1,6 +1,13 @@
 # Regenerated on each run — not committed
 outputs/
 
+# Webapp runtime/build artifacts
+webapp/frontend/node_modules/
+webapp/frontend/.next/
+webapp/backend/db.sqlite3
+webapp/backend/staticfiles/
+*.log
+
 # Python cruft
 .ipynb_checkpoints/
 __pycache__/
@@ -10,4 +17,4 @@ __pycache__/
 # OS
 .DS_Store
 
-# NOTE: model/model_bundle.pkl IS committed (the trained deliverable).
+# NOTE: model/model_bundle.pkl and webapp/frontend/out/ ARE committed (deliverables).
