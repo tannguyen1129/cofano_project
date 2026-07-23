@@ -185,8 +185,14 @@ To rebuild the frontend after editing it: `cd webapp/frontend && npm install && 
 To refresh the inventory-panel data: `python webapp/make_sim_data.py`.
 
 **Security notes.** `SECRET_KEY`, `DEBUG` and `ALLOWED_HOSTS` come from environment variables —
-nothing is hardcoded. `serve.py` binds to `127.0.0.1` unless you set `HOST`. There is no login, so
-do not expose it publicly; put it behind a reverse proxy with authentication if it must be reachable.
+nothing is hardcoded. `serve.py` binds to `127.0.0.1` unless you set `HOST`.
+
+The dashboard has no application-level login. If you need to reach it from another machine, set
+`HOST=0.0.0.0` **together with** `DASHBOARD_USER` / `DASHBOARD_PASSWORD`: `serve.py` then requires
+HTTP Basic credentials on every request, including the API. Without those two variables set, a
+non-localhost bind is unauthenticated and the server prints a warning. Note that Basic Auth over
+plain HTTP sends credentials base64-encoded, not encrypted — terminate TLS at a reverse proxy if
+the dashboard is reachable over an untrusted network.
 
 **Numbers shown.** The KPI, benchmark and inventory-penalty figures are the report's five-fold
 Version 5 results. The interactive per-tank simulation replays a single combined out-of-sample
