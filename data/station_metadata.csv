@@ -1,0 +1,21 @@
+station_code,brand,lat,lon,country_code,area_type
+B1,Brand B,50.77,4.26,BE,suburban
+B2,Brand B,51.19,3.83,BE,rural
+NB1,Brand A,51.75,5.14,NL,suburban
+NB2,Brand A,51.69,5.06,NL,urban_center
+NB3,Brand A,51.61,5.67,NL,suburban
+NB4,Brand A,51.69,4.95,NL,suburban
+Z1,Brand A,51.33,3.68,NL,suburban
+Z10,Brand A,51.55,4.1,NL,suburban
+Z11,Brand A,51.33,3.84,NL,urban_center
+Z12,Brand A,51.29,4.05,NL,urban_center
+Z13,Brand A,51.32,3.91,NL,suburban
+Z14,Brand A,51.25,3.91,NL,rural
+Z2,Brand A,51.54,3.6,NL,suburban
+Z3,Brand A,51.33,3.5,NL,urban_center
+Z4,Brand A,51.29,4.05,NL,urban_center
+Z5,Brand A,51.33,3.83,NL,suburban
+Z6,Brand A,51.31,3.85,NL,suburban
+Z7,Brand A,51.28,3.83,NL,suburban
+Z8,Brand A,51.32,3.83,NL,suburban
+Z9,Brand A,51.56,3.8,NL,suburban
