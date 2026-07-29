@@ -1,6 +1,11 @@
 # Regenerated on each run — not committed
 outputs/
 
+# Real secrets — never commit (only .env.example is tracked)
+.env
+*.env
+!*.env.example
+
 # Webapp runtime/build artifacts
 webapp/frontend/node_modules/
 webapp/frontend/.next/
