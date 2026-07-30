@@ -159,3 +159,4 @@ footer{color:var(--mut);font-size:12px;padding:24px 30px;border-top:1px solid va
   .chip.warn{background:#3a2c10;border-color:#7a5a1e;color:#f0c674}
   .freshbar{background:#3a2c10;border-color:#7a5a1e;color:#f0c674}
 }
+.finenote{margin-top:6px;font-size:11px;color:#94a3b8;opacity:.85}

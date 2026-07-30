@@ -17,7 +17,10 @@ sys.path.insert(0, str(REPO_ROOT))
 from pipeline import TARGET, PRODUCT_FUEL, build_features  # noqa: E402
 
 MODEL_PATH = REPO_ROOT / "model" / "model_bundle.pkl"
-DATA_PATH = REPO_ROOT / "data" / "demand_history.csv"
+# Prefer the rolling "live" history (real data + synthetic seasonal tail to today) so the
+# dashboard's planning week stays current; fall back to the raw real data.
+_LIVE = REPO_ROOT / "webapp" / "data" / "demand_history_live.csv"
+DATA_PATH = _LIVE if _LIVE.exists() else REPO_ROOT / "data" / "demand_history.csv"
 GEO_PATH = REPO_ROOT / "data" / "station_metadata.csv"
 HORIZON_DAYS = 7                                        # weekly planning horizon
 

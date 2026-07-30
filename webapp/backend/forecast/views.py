@@ -14,6 +14,10 @@ from .serializers import (StationSerializer, ProductMapSerializer, ForecastSeria
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DATA = REPO_ROOT / "data"
 WEBAPP_DATA = REPO_ROOT / "webapp" / "data"
+# Rolling live history (real + synthetic tail to today) if present, else the raw real data.
+_LIVE = WEBAPP_DATA / "demand_history_live.csv"
+HISTORY_CSV = _LIVE if _LIVE.exists() else DATA / "demand_history.csv"
+REAL_CUTOFF = "2026-05-22"      # last real (non-synthetic) data date, for the honest footnote
 FUEL_ORDER = ["Euro95", "Diesel", "Super98", "AdBlue", "LPG"]
 
 # Version 5 simulation constants (see report §6.2): deliveries are hard-capped at a tank
@@ -24,7 +28,7 @@ STOCKOUT_WEIGHT, CARRY_WEIGHT, REPLAN_WEIGHT = 10, 1, 5
 
 @functools.lru_cache(maxsize=1)
 def _history():
-    raw = pd.read_csv(DATA / "demand_history.csv", low_memory=False)
+    raw = pd.read_csv(HISTORY_CSV, low_memory=False)
     raw["date"] = pd.to_datetime(raw["date"], errors="coerce")
     return raw
 
@@ -156,6 +160,7 @@ def dashboard(r):
                  "data_as_of": last_actual,
                  "data_age_days": data_age,
                  "data_fresh": data_age <= 7,
+                 "real_cutoff": REAL_CUTOFF,
                  "n_stations": Station.objects.count(),
                  "n_series": Forecast.objects.values("station", "product").distinct().count(),
                  "brands": brands},

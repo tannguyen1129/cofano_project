@@ -14,6 +14,8 @@ from forecast.models import Station, ProductMap, Forecast, BenchmarkMetric, Pena
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 DATA = REPO_ROOT / "data"
+_LIVE = REPO_ROOT / "webapp" / "data" / "demand_history_live.csv"
+HISTORY_CSV = _LIVE if _LIVE.exists() else DATA / "demand_history.csv"
 
 PRODUCT_FUEL = {"P1": "Euro95", "P2": "Super98", "P3": "Diesel", "P4": "AdBlue", "P5": "LPG"}
 MAIN = {"P1", "P3"}
@@ -57,7 +59,7 @@ class Command(BaseCommand):
             M.objects.all().delete()
 
         geo = pd.read_csv(DATA / "station_metadata.csv")
-        raw = pd.read_csv(DATA / "demand_history.csv", low_memory=False)
+        raw = pd.read_csv(HISTORY_CSV, low_memory=False)
         demand = raw.groupby("station_code")["daily_demand"].sum().to_dict()
 
         smap = {}
