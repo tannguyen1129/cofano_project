@@ -75,16 +75,20 @@ export default function Page(){
     fetch(`${API}/sim?${q}`).then(r=>r.json()).then(setSim); },[simSt,simPr]);
 
   const agg=useMemo(()=>{
-    if(!recs.length) return {labels:[],p50:[],p95:[]};
-    const m={}; recs.forEach(r=>{const k=gran==="week"?weekStart(r.date):r.date; (m[k]=m[k]||{p50:0,p95:0}); m[k].p50+=r.p50; m[k].p95+=r.p95;});
+    if(!recs.length) return {labels:[],p50:[],p95:[],actual:[]};
+    const m={}; recs.forEach(r=>{const k=gran==="week"?weekStart(r.date):r.date;
+      (m[k]=m[k]||{p50:null,p95:null,actual:null});
+      if(r.p50!=null){m[k].p50=(m[k].p50||0)+r.p50;} if(r.p95!=null){m[k].p95=(m[k].p95||0)+r.p95;}
+      if(r.actual!=null){m[k].actual=(m[k].actual||0)+r.actual;}});
     const labels=Object.keys(m).sort();
-    return {labels,p50:labels.map(k=>Math.round(m[k].p50)),p95:labels.map(k=>Math.round(m[k].p95))};
+    const R=v=>v==null?null:Math.round(v);
+    return {labels,p50:labels.map(k=>R(m[k].p50)),p95:labels.map(k=>R(m[k].p95)),actual:labels.map(k=>R(m[k].actual))};
   },[recs,gran]);
 
   const view=useMemo(()=>{
     if(!agg.labels.length||!rngFrom||!rngTo) return agg;
     const ix=agg.labels.map((_,i)=>i).filter(i=>agg.labels[i]>=rngFrom&&agg.labels[i]<=rngTo);
-    return {labels:ix.map(i=>agg.labels[i]),p50:ix.map(i=>agg.p50[i]),p95:ix.map(i=>agg.p95[i])};
+    return {labels:ix.map(i=>agg.labels[i]),p50:ix.map(i=>agg.p50[i]),p95:ix.map(i=>agg.p95[i]),actual:ix.map(i=>agg.actual[i])};
   },[agg,rngFrom,rngTo]);
 
   // forecast chart
@@ -96,10 +100,12 @@ export default function Page(){
       usePointStyle:true,bodySpacing:5,caretSize:6});
     ch.current.fc&&ch.current.fc.destroy();
     const today=d?.meta.today, ti=gran==="day"?view.labels.indexOf(today):-1, grid="#eef2f7";
+    const actLabel=lang==="vi"?"Thực tế":"Actual";
     ch.current.fc=new Ch(C1.current,{type:"line",data:{labels:view.labels,datasets:[
-      {label:"P95",data:view.p95,borderColor:"#e11d65",backgroundColor:"rgba(225,29,101,.06)",fill:true,borderWidth:1.4,pointRadius:0,tension:.3},
-      {label:"P50",data:view.p50,borderColor:"#0a9c4a",backgroundColor:"rgba(10,156,74,.10)",fill:true,borderWidth:2.4,pointRadius:0,tension:.3},
-      {label:"today",data:view.labels.map((x,i)=>i===ti?view.p95[i]:null),borderColor:"#2563eb",pointBackgroundColor:"#2563eb",pointBorderColor:"#fff",pointBorderWidth:2,pointRadius:6,showLine:false}]},
+      {label:"P95",data:view.p95,borderColor:"#e11d65",backgroundColor:"rgba(225,29,101,.06)",fill:true,borderWidth:1.4,pointRadius:0,tension:.3,spanGaps:false},
+      {label:"P50",data:view.p50,borderColor:"#0a9c4a",backgroundColor:"rgba(10,156,74,.10)",fill:true,borderWidth:2.4,pointRadius:0,tension:.3,spanGaps:false},
+      {label:actLabel,data:view.actual,borderColor:"#334155",backgroundColor:"rgba(51,65,85,.05)",borderWidth:1.8,pointRadius:0,tension:.3,spanGaps:false,borderDash:[]},
+      {label:"today",data:view.labels.map((x,i)=>i===ti?(view.actual[i]??view.p50[i]):null),borderColor:"#2563eb",pointBackgroundColor:"#2563eb",pointBorderColor:"#fff",pointBorderWidth:2,pointRadius:6,showLine:false}]},
       options:{maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{display:false},
         tooltip:{callbacks:{title:c=>c[0].label,label:c=>(c.dataset.label==="today"?"":c.dataset.label+": "+fmt(Math.round(c.parsed.y))+" L")}}},
         scales:{x:{ticks:{maxTicksLimit:gran==="week"?12:10,font:{size:10}},grid:{display:false}},y:{ticks:{callback:v=>fmt(v),font:{size:10}},grid:{color:grid},border:{display:false},title:{display:true,text:gran==="week"?"L / "+(lang==="vi"?"tuần":"week"):"L / "+(lang==="vi"?"ngày":"day"),font:{size:10}}}}}});
@@ -214,15 +220,16 @@ export default function Page(){
           </div>
           <div className="controls" style={{paddingLeft:43}}>
             <span className="range"><Calendar size={14}/>{lang==="vi"?"Khoảng thời gian":"Date range"}</span>
-            <input type="date" value={rngFrom} min={d.dates[0]} max={rngTo} onChange={e=>setRngFrom(e.target.value)}/>
+            <input type="date" value={rngFrom} min={agg.labels[0]} max={rngTo||agg.labels[agg.labels.length-1]} onChange={e=>setRngFrom(e.target.value)}/>
             <span className="range">→</span>
-            <input type="date" value={rngTo} min={rngFrom} max={d.dates[d.dates.length-1]} onChange={e=>setRngTo(e.target.value)}/>
-            <button className="preset" onClick={()=>{setRngFrom(d.dates[0]);setRngTo(d.dates[Math.min(6,d.dates.length-1)]);}}>{lang==="vi"?"7 ngày":"7 days"}</button>
-            <button className="preset" onClick={()=>{setRngFrom(d.dates[0]);setRngTo(d.dates[Math.min(13,d.dates.length-1)]);}}>{lang==="vi"?"2 tuần":"2 weeks"}</button>
-            <button className="preset" onClick={()=>{setRngFrom(d.dates[0]);setRngTo(d.dates[d.dates.length-1]);}}>{lang==="vi"?"Cả kỳ":"Full"}</button>
+            <input type="date" value={rngTo} min={rngFrom||agg.labels[0]} max={agg.labels[agg.labels.length-1]} onChange={e=>setRngTo(e.target.value)}/>
+            <button className="preset" onClick={()=>{setRngFrom(d.dates[0]);setRngTo(d.dates[d.dates.length-1]);}}>{lang==="vi"?"Tuần dự báo":"Forecast wk"}</button>
+            <button className="preset" onClick={()=>{const L=agg.labels;setRngFrom(L[Math.max(0,L.length-30)]);setRngTo(L[L.length-1]);}}>{lang==="vi"?"1 tháng":"1 month"}</button>
+            <button className="preset" onClick={()=>{setRngFrom(agg.labels[0]);setRngTo(agg.labels[agg.labels.length-1]);}}>{lang==="vi"?"Cả kỳ":"Full"}</button>
           </div>
           <div className="chartbox"><canvas ref={C1}></canvas></div>
           <div className="legend">
+            <span><span className="sw" style={{background:"#334155"}}></span>{lang==="vi"?"Thực tế (lịch sử)":"Actual (history)"}</span>
             <span><span className="sw" style={{background:"#0a9c4a"}}></span>{tr("lg_p50")}</span>
             <span><span className="sw" style={{background:"#e11d65"}}></span>{tr("lg_p95")}</span>
             <span><span className="sw" style={{background:"#2563eb",width:10,height:10,borderRadius:"50%"}}></span>{tr("lg_today")}</span></div>

@@ -124,16 +124,43 @@ def kpis(r): return Response(KpiSerializer(Kpi.objects.all(), many=True).data)
 def sim(r): return Response(_sim(r.GET.get("station"), r.GET.get("product")))
 
 
+PRODUCT_FUEL = {"P1": "Euro95", "P2": "Super98", "P3": "Diesel", "P4": "AdBlue", "P5": "LPG"}
+HISTORY_DAYS = 84      # weeks of actuals shown before the forecast window
+
+
 @api_view(["GET"])
 def forecast(r):
-    qs = Forecast.objects.select_related("station").all()
+    """Actual history (last ~12 weeks) + the model's forecast for the planning week.
+
+    Each row carries `actual` (real/observed litres, null for future) and `p50/p90/p95`
+    (forecast, null for history) so the chart can draw one continuous timeline.
+    """
     st, pr = r.GET.get("station"), r.GET.get("product")
+
+    fq = Forecast.objects.select_related("station").all()
     if st:
-        qs = qs.filter(station__code=st)
+        fq = fq.filter(station__code=st)
     if pr:
-        qs = qs.filter(product=pr)
-    qs = qs.order_by("station__code", "product", "date")[:5000]
-    return Response(ForecastSerializer(qs, many=True).data)
+        fq = fq.filter(product=pr)
+    fq = fq.order_by("station__code", "product", "date")
+    out = [dict(date=str(f.date), station=f.station.code, product=f.product, fuel=f.fuel,
+                actual=None, p50=f.p50, p90=f.p90, p95=f.p95) for f in fq]
+
+    fc_start = Forecast.objects.order_by("date").values_list("date", flat=True).first()
+    if fc_start is not None:
+        fc_start = pd.Timestamp(fc_start)
+        hist = _history()
+        h = hist[(hist["date"] >= fc_start - pd.Timedelta(days=HISTORY_DAYS)) & (hist["date"] < fc_start)]
+        if st:
+            h = h[h["station_code"] == st]
+        if pr:
+            h = h[h["product"] == pr]
+        h = h[["date", "station_code", "product", "daily_demand"]].dropna(subset=["daily_demand"])
+        for row in h.itertuples(index=False):
+            out.append(dict(date=row.date.strftime("%Y-%m-%d"), station=row.station_code,
+                            product=row.product, fuel=PRODUCT_FUEL.get(row.product, row.product),
+                            actual=round(float(row.daily_demand), 1), p50=None, p90=None, p95=None))
+    return Response(out)
 
 
 @api_view(["GET"])
