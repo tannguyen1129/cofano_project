@@ -56,20 +56,18 @@ class BasicAuth:
 
 
 if __name__ == "__main__":
+    # Authentication is handled inside Django by the session login gate
+    # (forecast.gate.LoginRequiredMiddleware), not here. serve.py just binds the socket;
+    # keep it on 127.0.0.1 behind nginx.
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
     host = os.environ.get("HOST", "127.0.0.1")
 
     app = application
-    user, password = os.environ.get("DASHBOARD_USER"), os.environ.get("DASHBOARD_PASSWORD")
-    if user and password:
-        app = BasicAuth(app, user, password)
-        auth_state = "Basic Auth ENABLED"
-    else:
-        auth_state = "Basic Auth DISABLED (no DASHBOARD_USER/DASHBOARD_PASSWORD)"
-        if host != "127.0.0.1":
-            print(f"WARNING: binding {host} without authentication — set DASHBOARD_USER and "
-                  f"DASHBOARD_PASSWORD, or bind 127.0.0.1.", flush=True)
+    if os.environ.get("SERVE_BASIC_AUTH") == "1":     # optional standalone fallback, off by default
+        user, password = os.environ.get("DASHBOARD_USER"), os.environ.get("DASHBOARD_PASSWORD")
+        if user and password:
+            app = BasicAuth(app, user, password)
 
     httpd = make_server(host, port, app, server_class=ThreadingWSGIServer)
-    print(f"Django serving on http://{host}:{port} — {auth_state}", flush=True)
+    print(f"Django serving on http://{host}:{port}", flush=True)
     httpd.serve_forever()

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Fuel, Calendar, Database, Crosshair, Store, Layers, Gauge, TrendingDown, ShieldCheck,
-  Droplets, LineChart, BarChart3, Grid3x3, Globe, Tags, Info, PieChart, ChevronDown, Check,
+  Droplets, LineChart, BarChart3, Grid3x3, Globe, Tags, Info, PieChart, ChevronDown, Check, LogOut,
 } from "lucide-react";
 
 function Dropdown({value,onChange,options,placeholder,minw=150}){
@@ -183,12 +183,24 @@ export default function Page(){
       <div className="topbar">
         <h1>{tr("title")}</h1><div className="sub">{tr("sub")}</div>
         <div className="chips">
-          <span className="chip"><Calendar size={14}/>{lang==="vi"?"Hôm nay":"Today"}: <b>{d.meta.today}</b></span>
-          <span className="chip"><Database size={14}/>{lang==="vi"?"Số liệu thực đến":"Actuals until"}: <b>{d.meta.last_actual}</b></span>
-          <span className="chip"><Crosshair size={14}/>{lang==="vi"?"Kỳ dự báo":"Forecast window"}: <b>{d.meta.start} → {d.meta.end}</b></span>
+          <span className="chip"><Calendar size={14}/>{lang==="vi"?"Hôm nay":"Today"}: <b>{d.meta.server_now||d.meta.today}</b></span>
+          <span className={"chip "+(d.meta.data_fresh?"ok":"warn")} title={lang==="vi"?"Độ mới của dữ liệu nạp vào hệ thống":"Freshness of the ingested data feed"}>
+            <Database size={14}/>{lang==="vi"?"Dữ liệu tới":"Data as of"}: <b>{d.meta.data_as_of||d.meta.last_actual}</b>
+            {d.meta.data_age_days!=null && <em style={{fontStyle:"normal",opacity:.8}}>&nbsp;· {d.meta.data_age_days}{lang==="vi"?" ngày trước":"d ago"}</em>}
+            <span className="statusdot"/>{d.meta.data_fresh?(lang==="vi"?"Mới":"Fresh"):(lang==="vi"?"Cũ":"Stale")}
+          </span>
+          <span className="chip"><Crosshair size={14}/>{lang==="vi"?"Kỳ dự báo":"Planning week"}: <b>{d.meta.start} → {d.meta.end}</b></span>
           <span className="chip"><Store size={14}/><b>{(d.meta.brands||[]).map(b=>`${b.n} ${b.brand}`).join(" + ")}</b></span>
           <span className="chip"><Layers size={14}/>{lang==="vi"?"Tổ hợp trạm–sản phẩm":"Station–product pairs"}: <b>{d.meta.n_series}</b></span>
+          <a className="chip logout" href="/logout" title={lang==="vi"?"Đăng xuất":"Sign out"}><LogOut size={14}/>{lang==="vi"?"Đăng xuất":"Sign out"}</a>
         </div>
+        {!d.meta.data_fresh && d.meta.data_age_days!=null &&
+          <div className="freshbar">
+            <span className="statusdot"/>
+            {lang==="vi"
+              ? `Nguồn dữ liệu trong bản demo dừng ở ${d.meta.data_as_of}. Hệ thống hiển thị tuần kế hoạch ngay sau mốc dữ liệu mới nhất — khi có dữ liệu bán mới nạp vào, dự báo tự cuộn tới. (Đây là chỉ báo data-freshness như một hệ thống vận hành thật.)`
+              : `The demo data feed ends on ${d.meta.data_as_of}. The dashboard shows the planning week right after the latest available data — as new sales data is ingested, the forecast rolls forward automatically. (This is a data-freshness indicator, as a real operations system would show.)`}
+          </div>}
       </div>
 
       <main className="main">

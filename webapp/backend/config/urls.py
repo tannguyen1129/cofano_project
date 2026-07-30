@@ -4,6 +4,8 @@ from django.contrib import admin
 from django.http import FileResponse, HttpResponse, Http404
 from django.urls import path, re_path, include
 
+from forecast.gate import login_view, logout_view
+
 
 def serve_frontend(request, path=""):
     """Phục vụ Next.js static export (frontend/out) trên cùng cổng với API."""
@@ -22,6 +24,8 @@ def serve_frontend(request, path=""):
 
 
 urlpatterns = [
+    path("login", login_view),
+    path("logout", logout_view),
     path("admin/", admin.site.urls),
     path("api/", include("forecast.urls")),
     re_path(r"^(?P<path>.*)$", serve_frontend),

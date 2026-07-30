@@ -1,3 +1,4 @@
+import datetime
 import functools
 from pathlib import Path
 
@@ -145,9 +146,16 @@ def dashboard(r):
            for s in Station.objects.all()]
     brands = [{"brand": b, "n": Station.objects.filter(brand=b).count()}
               for b in sorted(Station.objects.values_list("brand", flat=True).distinct()) if b]
-    last_actual = _history()["date"].max().strftime("%Y-%m-%d")
+    last_dt = _history()["date"].max().date()
+    last_actual = last_dt.strftime("%Y-%m-%d")
+    now = datetime.date.today()
+    data_age = (now - last_dt).days
     return Response({
         "meta": {"today": dates[0], "last_actual": last_actual, "start": dates[0], "end": dates[-1],
+                 "server_now": now.strftime("%Y-%m-%d"),
+                 "data_as_of": last_actual,
+                 "data_age_days": data_age,
+                 "data_fresh": data_age <= 7,
                  "n_stations": Station.objects.count(),
                  "n_series": Forecast.objects.values("station", "product").distinct().count(),
                  "brands": brands},

@@ -35,7 +35,11 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "forecast.gate.LoginRequiredMiddleware",
 ]
+
+# Behind Cloudflare/nginx: trust the forwarded protocol so Django knows the request is HTTPS.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 ROOT_URLCONF = "config.urls"
 TEMPLATES = [{

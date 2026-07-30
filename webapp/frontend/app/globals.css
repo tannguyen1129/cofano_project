@@ -142,3 +142,20 @@ footer{color:var(--mut);font-size:12px;padding:24px 30px;border-top:1px solid va
   .sidebar{transform:translateX(-100%);transition:.2s} .content,footer{margin-left:0}
   .kpis{grid-template-columns:1fr 1fr}.grid2,.grid2b{grid-template-columns:1fr}
 }
+
+/* --- data-freshness status + auth --- */
+.chip.ok  b{color:#0a9c4a}
+.chip.warn{color:#8a5a00;background:#fff7e6;border-color:#f4d58a}
+.chip .statusdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin:0 5px 0 8px;vertical-align:middle}
+.chip.ok   .statusdot{background:#0a9c4a;box-shadow:0 0 0 3px rgba(10,156,74,.18)}
+.chip.warn .statusdot{background:#e8820c;box-shadow:0 0 0 3px rgba(232,130,12,.18)}
+.chip.logout{cursor:pointer;text-decoration:none;color:#64748b}
+.chip.logout:hover{color:#e11d44;border-color:#f4b8c4}
+.freshbar{display:flex;align-items:center;gap:8px;margin:10px 0 0;padding:9px 13px;border-radius:10px;
+  background:#fff7e6;border:1px solid #f4d58a;color:#8a5a00;font-size:12.5px;line-height:1.5}
+.freshbar .statusdot{width:9px;height:9px;border-radius:50%;background:#e8820c;flex:0 0 auto;
+  box-shadow:0 0 0 3px rgba(232,130,12,.18)}
+@media (prefers-color-scheme:dark){
+  .chip.warn{background:#3a2c10;border-color:#7a5a1e;color:#f0c674}
+  .freshbar{background:#3a2c10;border-color:#7a5a1e;color:#f0c674}
+}

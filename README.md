@@ -184,15 +184,21 @@ python serve.py 8080                    # http://127.0.0.1:8080
 To rebuild the frontend after editing it: `cd webapp/frontend && npm install && npm run build`.
 To refresh the inventory-panel data: `python webapp/make_sim_data.py`.
 
-**Security notes.** `SECRET_KEY`, `DEBUG` and `ALLOWED_HOSTS` come from environment variables —
-nothing is hardcoded. `serve.py` binds to `127.0.0.1` unless you set `HOST`.
+**Login.** The dashboard is gated by a session login page (`/login`, styled — not the browser
+Basic-Auth popup), implemented by `forecast.gate.LoginRequiredMiddleware`. Set `DASHBOARD_USER`
+and `DASHBOARD_PASSWORD`; every page and API call then requires signing in (the API returns 401
+until the session cookie is present). Leaving `DASHBOARD_PASSWORD` unset disables the gate — only
+do that on localhost. Sign out at `/logout`.
 
-The dashboard has no application-level login. If you need to reach it from another machine, set
-`HOST=0.0.0.0` **together with** `DASHBOARD_USER` / `DASHBOARD_PASSWORD`: `serve.py` then requires
-HTTP Basic credentials on every request, including the API. Without those two variables set, a
-non-localhost bind is unauthenticated and the server prints a warning. Note that Basic Auth over
-plain HTTP sends credentials base64-encoded, not encrypted — terminate TLS at a reverse proxy if
-the dashboard is reachable over an untrusted network.
+**Data freshness.** The header shows the real current date, the date the data feed ends, its age
+in days, and a fresh/stale indicator. The forecast is always the planning week immediately after
+the latest available data; as new sales data is ingested the window rolls forward automatically —
+the same data-freshness UX a production operations dashboard uses.
+
+**Security notes.** `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` and the login credentials all come from
+the environment — nothing hardcoded. `serve.py` binds `127.0.0.1` by default and sits behind nginx;
+`SECURE_PROXY_SSL_HEADER` lets Django detect HTTPS through the proxy. Terminate TLS at the reverse
+proxy / CDN (this deployment runs behind Cloudflare).
 
 **Numbers shown.** The KPI, benchmark and inventory-penalty figures are the report's five-fold
 Version 5 results. The interactive per-tank simulation replays a single combined out-of-sample
